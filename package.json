@@ -1,0 +1,24 @@
+{
+  "name": "987f1f400a0b8e005a49dfb2cd0a0233",
+  "version": "1.0.0",
+  "description": "``` npm install ```",
+  "homepage": "https://gist.github.com/987f1f400a0b8e005a49dfb2cd0a0233",
+  "bugs": {
+    "url": "https://gist.github.com/987f1f400a0b8e005a49dfb2cd0a0233"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@gist.github.com/987f1f400a0b8e005a49dfb2cd0a0233.git"
+  },
+  "license": "ISC",
+  "author": "",
+  "type": "module",
+  "main": "download.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "@supercharge/promise-pool": "^3.2.0",
+    "undici": "^7.16.0"
+  }
+}
