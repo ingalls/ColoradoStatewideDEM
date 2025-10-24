@@ -23,39 +23,56 @@ export_process_file() {
 
     unzip -o "$FILE" -d "$TMPDIR"
 
-    INPUT=$(find "$TMPDIR" -maxdepth 1 -name "*.img" | head -1)
+    INPUT_IMG=$(find "$TMPDIR" -maxdepth 1 -name "*.img" | head -1)
+    INPUT_TIF=$(find "$TMPDIR" -maxdepth 1 -name "*.tif" | head -1)
 
-    if [[ -z "$INPUT" ]]; then
-        echo "Error: No .img file found in $FILE"
+    if [[ -z "$INPUT_IMG" && -z "$INPUT_TIF" ]]; then
+        echo "Error: No input file found in $FILE"
         return 0
     fi
 
-    echo "Processing $INPUT"
-    
-    TMP_TIF="${INPUT%.img}.tmp.tif"
-    FINAL_TIF="${INPUT%.img}.tif"
-
-    gdal_translate -of GTiff "$INPUT" "$TMP_TIF"
-
-    gdalwarp -t_srs EPSG:3857 "$TMP_TIF" "$FINAL_TIF"
-
-    OUTPUT_DIR="./tiff/$DATASET"
+    OUTPUT_DIR="../tiff/$DATASET"
     mkdir -p "$OUTPUT_DIR"
-
     DEST_PATH="$OUTPUT_DIR/${BASENAME}.tif"
 
-    mv "$FINAL_TIF" "$DEST_PATH"
+    if [[ -n "$INPUT_TIF" ]]; then
+        INPUT="$INPUT_TIF"
+
+        echo "Processing $INPUT"
+        
+        TMP_TIF="${INPUT%.tif}.tmp.tif"
+        FINAL_TIF="${INPUT%.tif}.final.tif"
+
+        gdal_translate -of GTiff "$INPUT" "$TMP_TIF"
+
+        gdalwarp -t_srs EPSG:3857 "$TMP_TIF" "$FINAL_TIF"
+
+        mv "$FINAL_TIF" "$DEST_PATH"
+    else
+        INPUT="$INPUT_IMG"
+
+        echo "Processing $INPUT"
+        
+        TMP_TIF="${INPUT%.img}.tmp.tif"
+        FINAL_TIF="${INPUT%.img}.final.tif"
+
+        gdal_translate -of GTiff "$INPUT" "$TMP_TIF"
+
+        gdalwarp -t_srs EPSG:3857 "$TMP_TIF" "$FINAL_TIF"
+
+        mv "$FINAL_TIF" "$DEST_PATH"
+    fi
 
     echo "Finished processing $FILE. Output at $DEST_PATH"
 }
 
 export -f export_process_file
 
-INPUT_DIR="./raw/$DATASET"
-OUTPUT_DIR_FINAL="./tiff/$DATASET"
-FINAL_MERGED_TIF="./tiff/${DATASET}.tif"
-FINAL_COG_TIF="./tiff/${DATASET}.cog.tif"
-FILE_LIST_TXT="./tiff/$DATASET.txt"
+INPUT_DIR="../raw/$DATASET"
+OUTPUT_DIR_FINAL="../tiff/$DATASET"
+FINAL_MERGED_TIF="../tiff/${DATASET}.tif"
+FINAL_COG_TIF="../tiff/${DATASET}.cog.tif"
+FILE_LIST_TXT="../tiff/$DATASET.txt"
 
 if [[ ! -d "$INPUT_DIR" ]]; then
     echo "Error: Input directory $INPUT_DIR does not exist."
