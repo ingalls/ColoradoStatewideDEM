@@ -17,12 +17,29 @@ const downloadDir = new URL('file://' + process.argv[2]) || new URL('./data', im
 //console.log('Supported Formats: ', Object.values(formats).map(f => f.name).join(', '));
 // While the api reports TIFF support, they aren't actually generated/available
 
+let progress = {};
+if (!fs.existsSync(`${downloadDir.pathname}/progress.json`, { recursive: true })) {
+    for (const id of datasets.keys()) {
+        const dataset = datasets.get(id);
+
+        progress[id] = {
+            name: dataset.model.title,
+            downloaded: false
+        }
+    }
+
+    fs.writeFileSync(`${downloadDir.pathname}/progress.json`, JSON.stringify(progress, null, 4));
+} else {
+    progress = JSON.parse(String(fs.readFileSync(`${downloadDir.pathname}/progress.json`)))
+}
+
 const formats = [
     '36ac1747-105e-4eef-9be4-2d06f218d861', // ADF
     'cab5dd42-cbfc-4bdc-8f20-46be55fbb415', // TIF
     '30993bf7-abc8-4339-978a-5e61cd692768', // IMG
     'db1174ae-ff1a-4cef-8c78-cd1bb8048749' // ASC
 ]
+
 
 for (const dataset of datasets.keys()) {
     console.log(`Dataset: ${dataset}`);
@@ -33,19 +50,23 @@ for (const dataset of datasets.keys()) {
 
     const { errors } = await PromisePool
         .for(tileIndex)
-        .withConcurrency(1)
+        .withConcurrency(25)
         .process(async (tileid) => {
-            console.log(`Dataset: ${dataset}, Tile: ${tileid}`);
-
             if (fs.existsSync(`${downloadDir.pathname}${dataset}/${tileid}.zip`)) {
-                console.log(`Dataset: ${dataset}, Tile: ${tileid} already exists, skipping`);
                 return;
+            } else {
+                console.log(`Dataset: ./${dataset}/${tileid}.zip`);
             }
 
             await downloadTile(dataset, tileid, formats);
         });
 
     if (errors.length) throw new Error(`Failed to download some tiles: ${errors.map(e => e.message).join(', ')}`);
+
+    if (!errors.length) {
+        progress[dataset].downloaded = true;
+        fs.writeFileSync(`${downloadDir.pathname}/progress.json`, JSON.stringify(progress, null, 4));
+    }
 }
 
 async function downloadTileIndex(dataset) {
