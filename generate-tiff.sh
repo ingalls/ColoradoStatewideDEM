@@ -25,8 +25,9 @@ export_process_file() {
 
     INPUT_IMG=$(find "$TMPDIR" -maxdepth 1 -name "*.img" | head -1)
     INPUT_TIF=$(find "$TMPDIR" -maxdepth 1 -name "*.tif" | head -1)
+    INPUT_ADF=$(find "$TMPDIR" -maxdepth 2 -name "*.adf" | head -1)
 
-    if [[ -z "$INPUT_IMG" && -z "$INPUT_TIF" ]]; then
+    if [[ -z "$INPUT_IMG" && -z "$INPUT_TIF" && -z "$INPUT_ADF" ]]; then
         echo "Error: No input file found in $FILE"
         return 0
     fi
@@ -35,7 +36,20 @@ export_process_file() {
     mkdir -p "$OUTPUT_DIR"
     DEST_PATH="$OUTPUT_DIR/${BASENAME}.tif"
 
-    if [[ -n "$INPUT_TIF" ]]; then
+    if [[ -n "$INPUT_ADF" ]]; then
+        INPUT_DIR=$(dirname "$INPUT_ADF")
+
+        echo "Processing $INPUT_DIR"
+        
+        TMP_TIF="${INPUT_DIR}/${BASENAME}.tmp.tif"
+        FINAL_TIF="${INPUT_DIR}/${BASENAME}.final.tif"
+
+        gdal_translate -of GTiff "$INPUT_DIR" "$TMP_TIF"
+
+        gdalwarp -t_srs EPSG:3857 "$TMP_TIF" "$FINAL_TIF"
+
+        mv "$FINAL_TIF" "$DEST_PATH"
+    elif [[ -n "$INPUT_TIF" ]]; then
         INPUT="$INPUT_TIF"
 
         echo "Processing $INPUT"
@@ -48,7 +62,7 @@ export_process_file() {
         gdalwarp -t_srs EPSG:3857 "$TMP_TIF" "$FINAL_TIF"
 
         mv "$FINAL_TIF" "$DEST_PATH"
-    else
+    elif [[ -n "$INPUT_IMG" ]]; then
         INPUT="$INPUT_IMG"
 
         echo "Processing $INPUT"
@@ -61,6 +75,9 @@ export_process_file() {
         gdalwarp -t_srs EPSG:3857 "$TMP_TIF" "$FINAL_TIF"
 
         mv "$FINAL_TIF" "$DEST_PATH"
+    else
+        echo "Unsupported Format"
+        exit 1
     fi
 
     echo "Finished processing $FILE. Output at $DEST_PATH"
@@ -94,8 +111,17 @@ if [[ ! -s "$FILE_LIST_TXT" ]]; then
     exit 1
 fi
 
-echo "Merging all .tif files into $FINAL_MERGED_TIF..."
-gdal_merge.py -o "$FINAL_MERGED_TIF" --optfile "$FILE_LIST_TXT"
+if [[ $(wc -l $FILE_LIST_TXT) -eq 1 ]]; then
+    SINGLE_FILE=$(head -n 1 "$FILE_LIST_TXT")
+
+    echo "Only one .tif file found. Copying to $FINAL_MERGED_TIF and converting to COG."
+    cp "$SINGLE_FILE" "$FINAL_MERGED_TIF"
+else
+    echo "Merging all .tif files into $FINAL_MERGED_TIF..."
+    gdal_merge.py -o "$FINAL_MERGED_TIF" --optfile "$FILE_LIST_TXT"
+
+    rm "$FILE_LIST_TXT"
+fi
 
 gdal_translate "${FINAL_MERGED_TIF}" "${FINAL_COG_TIF}" -of COG -co COMPRESS=LZW -co NUM_THREADS=ALL_CPUS -co BLOCKSIZE=256 -co BIGTIFF=IF_SAFER -a_nodata 0
 

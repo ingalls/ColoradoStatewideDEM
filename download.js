@@ -33,7 +33,7 @@ for (const dataset of datasets.keys()) {
 
     const { errors } = await PromisePool
         .for(tileIndex)
-        .withConcurrency(25)
+        .withConcurrency(1)
         .process(async (tileid) => {
             console.log(`Dataset: ${dataset}, Tile: ${tileid}`);
 
