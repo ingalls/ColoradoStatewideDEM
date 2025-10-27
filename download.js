@@ -3,7 +3,7 @@ import { pipeline } from 'node:stream/promises';
 import { PromisePool } from '@supercharge/promise-pool';
 import fs from 'node:fs';
 
-// node download.js <output dir>
+// node download.js <output dir> <optional datasetid>
 
 //const formats = await downloadFormats();
 const datasets = await downloadDatasets();
@@ -41,7 +41,7 @@ const formats = [
 ]
 
 
-for (const dataset of datasets.keys()) {
+for (const dataset of process.argv[3] ? [ process.argv[3] ] : datasets.keys()) {
     console.log(`Dataset: ${dataset}`);
 
     fs.mkdirSync(`${downloadDir.pathname}${dataset}`, { recursive: true });
@@ -50,7 +50,7 @@ for (const dataset of datasets.keys()) {
 
     const { errors } = await PromisePool
         .for(tileIndex)
-        .withConcurrency(25)
+        .withConcurrency(1)
         .process(async (tileid) => {
             if (fs.existsSync(`${downloadDir.pathname}${dataset}/${tileid}.zip`)) {
                 return;

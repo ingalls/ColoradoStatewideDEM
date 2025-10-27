@@ -111,7 +111,7 @@ if [[ ! -s "$FILE_LIST_TXT" ]]; then
     exit 1
 fi
 
-if [[ $(wc -l $FILE_LIST_TXT) -eq 1 ]]; then
+if [[ $(cat "$FILE_LIST_TXT" | wc -l) -eq 1 ]]; then
     SINGLE_FILE=$(head -n 1 "$FILE_LIST_TXT")
 
     echo "Only one .tif file found. Copying to $FINAL_MERGED_TIF and converting to COG."
