@@ -1,7 +1,15 @@
 import { fetch } from 'undici';
 import { pipeline } from 'node:stream/promises';
 import { PromisePool } from '@supercharge/promise-pool';
+import minimist from 'minimist';
 import fs from 'node:fs';
+
+const args = minimist(process.argv.slice(2), {
+    number: ['concurrency'],
+    default: {
+        concurrency: 25
+    }
+});
 
 // node download.js <output dir> <optional datasetid>
 
@@ -50,7 +58,7 @@ for (const dataset of process.argv[3] ? [ process.argv[3] ] : datasets.keys()) {
 
     const { errors } = await PromisePool
         .for(tileIndex)
-        .withConcurrency(1)
+        .withConcurrency(args.concurrency)
         .process(async (tileid) => {
             if (fs.existsSync(`${downloadDir.pathname}${dataset}/${tileid}.zip`)) {
                 return;
