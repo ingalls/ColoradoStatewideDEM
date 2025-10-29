@@ -44,9 +44,9 @@ export_process_file() {
         TMP_TIF="${INPUT_DIR}/${BASENAME}.tmp.tif"
         FINAL_TIF="${INPUT_DIR}/${BASENAME}.final.tif"
 
-        gdal_translate -of GTiff "$INPUT_DIR" "$TMP_TIF"
+        gdal raster convert -of GTiff "$INPUT_DIR" "$TMP_TIF"
 
-        gdalwarp -t_srs EPSG:3857 "$TMP_TIF" "$FINAL_TIF"
+        gdal raster warp -t_srs EPSG:3857 "$TMP_TIF" "$FINAL_TIF"
 
         mv "$FINAL_TIF" "$DEST_PATH"
     elif [[ -n "$INPUT_TIF" ]]; then
@@ -57,9 +57,9 @@ export_process_file() {
         TMP_TIF="${INPUT%.tif}.tmp.tif"
         FINAL_TIF="${INPUT%.tif}.final.tif"
 
-        gdal_translate -of GTiff "$INPUT" "$TMP_TIF"
+        gdal raster convert -of GTiff "$INPUT" "$TMP_TIF"
 
-        gdalwarp -t_srs EPSG:3857 "$TMP_TIF" "$FINAL_TIF"
+        gdal raster warp -t_srs EPSG:3857 "$TMP_TIF" "$FINAL_TIF"
 
         mv "$FINAL_TIF" "$DEST_PATH"
     elif [[ -n "$INPUT_IMG" ]]; then
@@ -70,9 +70,9 @@ export_process_file() {
         TMP_TIF="${INPUT%.img}.tmp.tif"
         FINAL_TIF="${INPUT%.img}.final.tif"
 
-        gdal_translate -of GTiff "$INPUT" "$TMP_TIF"
+        gdal raster convert -of GTiff "$INPUT" "$TMP_TIF"
 
-        gdalwarp -t_srs EPSG:3857 "$TMP_TIF" "$FINAL_TIF"
+        gdal raster warp -t_srs EPSG:3857 "$TMP_TIF" "$FINAL_TIF"
 
         mv "$FINAL_TIF" "$DEST_PATH"
     else
@@ -118,12 +118,12 @@ if [[ $(cat "$FILE_LIST_TXT" | wc -l) -eq 1 ]]; then
     cp "$SINGLE_FILE" "$FINAL_MERGED_TIF"
 else
     echo "Merging all .tif files into $FINAL_MERGED_TIF..."
-    gdal_merge.py -o "$FINAL_MERGED_TIF" --optfile "$FILE_LIST_TXT"
+    gdal raster mosaic -o "$FINAL_MERGED_TIF" --optfile "$FILE_LIST_TXT"
 
     rm "$FILE_LIST_TXT"
 fi
 
-gdal_translate "${FINAL_MERGED_TIF}" "${FINAL_COG_TIF}" -of COG -co COMPRESS=LZW -co NUM_THREADS=ALL_CPUS -co BLOCKSIZE=256 -co BIGTIFF=IF_SAFER -a_nodata 0
+gdal raster convert "${FINAL_MERGED_TIF}" "${FINAL_COG_TIF}" -of COG -co COMPRESS=LZW -co NUM_THREADS=ALL_CPUS -co BLOCKSIZE=256 -co BIGTIFF=IF_SAFER -a_nodata 0
 
 echo "All steps complete. Final merged file is at $FINAL_COG_TIF"
 
