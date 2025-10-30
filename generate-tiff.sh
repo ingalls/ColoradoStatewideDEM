@@ -44,9 +44,9 @@ export_process_file() {
         TMP_TIF="${INPUT_DIR}/${BASENAME}.tmp.tif"
         FINAL_TIF="${INPUT_DIR}/${BASENAME}.final.tif"
 
-        gdal raster convert -of GTiff "$INPUT_DIR" "$TMP_TIF"
+        gdal raster convert --of GTiff "$INPUT_DIR" "$TMP_TIF"
 
-        gdal raster warp -t_srs EPSG:3857 "$TMP_TIF" "$FINAL_TIF"
+        gdal raster reproject --dst-crs EPSG:3857 "$TMP_TIF" "$FINAL_TIF"
 
         mv "$FINAL_TIF" "$DEST_PATH"
     elif [[ -n "$INPUT_TIF" ]]; then
@@ -57,9 +57,9 @@ export_process_file() {
         TMP_TIF="${INPUT%.tif}.tmp.tif"
         FINAL_TIF="${INPUT%.tif}.final.tif"
 
-        gdal raster convert -of GTiff "$INPUT" "$TMP_TIF"
+        gdal raster convert --of GTiff "$INPUT" "$TMP_TIF"
 
-        gdal raster warp -t_srs EPSG:3857 "$TMP_TIF" "$FINAL_TIF"
+        gdal raster reproject --dst-crs EPSG:3857 "$TMP_TIF" "$FINAL_TIF"
 
         mv "$FINAL_TIF" "$DEST_PATH"
     elif [[ -n "$INPUT_IMG" ]]; then
@@ -70,9 +70,9 @@ export_process_file() {
         TMP_TIF="${INPUT%.img}.tmp.tif"
         FINAL_TIF="${INPUT%.img}.final.tif"
 
-        gdal raster convert -of GTiff "$INPUT" "$TMP_TIF"
+        gdal raster convert --of GTiff "$INPUT" "$TMP_TIF"
 
-        gdal raster warp -t_srs EPSG:3857 "$TMP_TIF" "$FINAL_TIF"
+        gdal raster reproject --dst-crs EPSG:3857 "$TMP_TIF" "$FINAL_TIF"
 
         mv "$FINAL_TIF" "$DEST_PATH"
     else
@@ -98,6 +98,15 @@ fi
 
 echo "Starting parallel processing of files in $INPUT_DIR..."
 
+# If a zip is invalid, print its name and exit 1
+INVALID=$(find . -type f -name "*.zip" -print0 | parallel -0 -j 25 'unzip -tq {} > /dev/null || echo "{}"')
+
+if [[ -n "$INVALID" ]]; then
+    echo "The following zip files are invalid:"
+    echo "$INVALID"
+    exit 1
+fi
+
 find "$INPUT_DIR" -maxdepth 1 -name "*.zip" | parallel export_process_file {} "$DATASET"
 
 echo "Parallel processing complete."
@@ -118,12 +127,12 @@ if [[ $(cat "$FILE_LIST_TXT" | wc -l) -eq 1 ]]; then
     cp "$SINGLE_FILE" "$FINAL_MERGED_TIF"
 else
     echo "Merging all .tif files into $FINAL_MERGED_TIF..."
-    gdal raster mosaic -o "$FINAL_MERGED_TIF" --optfile "$FILE_LIST_TXT"
+    gdal raster mosaic --dst-nodata 0 -o "$FINAL_MERGED_TIF" -i "@$FILE_LIST_TXT"
 
     rm "$FILE_LIST_TXT"
 fi
 
-gdal raster convert "${FINAL_MERGED_TIF}" "${FINAL_COG_TIF}" -of COG -co COMPRESS=LZW -co NUM_THREADS=ALL_CPUS -co BLOCKSIZE=256 -co BIGTIFF=IF_SAFER -a_nodata 0
+gdal raster convert "${FINAL_MERGED_TIF}" "${FINAL_COG_TIF}" --of COG --co COMPRESS=LZW --co NUM_THREADS=ALL_CPUS --co BLOCKSIZE=256 --co BIGTIFF=IF_SAFER
 
 echo "All steps complete. Final merged file is at $FINAL_COG_TIF"
 

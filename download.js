@@ -62,11 +62,10 @@ for (const dataset of process.argv[3] ? [ process.argv[3] ] : datasets.keys()) {
         .process(async (tileid) => {
             if (fs.existsSync(`${downloadDir.pathname}${dataset}/${tileid}.zip`)) {
                 return;
-            } else {
-                console.log(`Dataset: ./${dataset}/${tileid}.zip`);
             }
 
             await downloadTile(dataset, tileid, formats);
+            console.log(`Dataset: ./${dataset}/${tileid}.zip - downloaded`);
         });
 
     if (errors.length) throw new Error(`Failed to download some tiles: ${errors.map(e => e.message).join(', ')}`);
@@ -139,8 +138,16 @@ async function downloadTile(dataset, tileid, formatids) {
         throw new Error(`Failed to fetch tile ${tileid}: ${res.status} ${await res.text()}`);
     }
 
-    await pipeline(
-        res.body,
-        fs.createWriteStream(`${downloadDir.pathname}${dataset}/${tileid}.zip`)
-    )
+    try {
+        await pipeline(
+            res.body,
+            fs.createWriteStream(`${downloadDir.pathname}${dataset}/${tileid}.zip`)
+        )
+    } catch (err) {
+        if (fs.existsSync(`${downloadDir.pathname}${dataset}/${tileid}.zip`)) {
+            fs.unlinkSync(`${downloadDir.pathname}${dataset}/${tileid}.zip`);
+        }
+
+        throw err;
+    }
 }
